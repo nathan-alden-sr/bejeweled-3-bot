@@ -7,9 +7,10 @@ namespace NathanAlden.Bejeweled3Bot
 {
 	public class CaptureProcessor
 	{
-		public IReadOnlyDictionary<Gem, BitArray2D> Process(Bitmap bitmap, BoardDimensions dimensions)
+		public ProcessedCapture Process(Bitmap bitmap, BoardDimensions dimensions)
 		{
 			Dictionary<Gem, BitArray2D> bitArraysByGem = Gem.All.ToDictionary(arg => arg, arg => new BitArray2D(Constants.DefaultSizeInTiles.Width, Constants.DefaultSizeInTiles.Height));
+			Dictionary<GemType, BitArray2D> bitArraysByGemType = GemType.All.ToDictionary(arg => arg, arg => new BitArray2D(Constants.DefaultSizeInTiles.Width, Constants.DefaultSizeInTiles.Height));
 			BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, bitmap.PixelFormat);
 
 			try
@@ -62,7 +63,7 @@ namespace NathanAlden.Bejeweled3Bot
 				bitmap.UnlockBits(bitmapData);
 			}
 
-			return bitArraysByGem;
+			return new ProcessedCapture(bitArraysByGem, bitArraysByGemType);
 		}
 
 		private static ColorComponents CalculateAverageComponents(BitmapData bitmapData, int x, int y, int width, int height)

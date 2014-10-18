@@ -104,9 +104,9 @@ namespace NathanAlden.Bejeweled3Bot
 		private void BoardCapture(Board board, Bitmap bitmap, BoardDimensions dimensions)
 		{
 			var eventProcessor = new CaptureProcessor();
-			IReadOnlyDictionary<Gem, BitArray2D> bitArraysByGem = eventProcessor.Process(bitmap, dimensions);
+			ProcessedCapture processedCapture = eventProcessor.Process(bitmap, dimensions);
 
-			foreach (var pair in bitArraysByGem)
+			foreach (var pair in processedCapture.BitArraysByGem)
 			{
 				for (int x = 0; x < pair.Value.Width; x++)
 				{
@@ -129,7 +129,7 @@ namespace NathanAlden.Bejeweled3Bot
 
 			Swap[] swaps = Patterns.All
 				.SelectMany(
-					pattern => bitArraysByGem
+					pattern => processedCapture.BitArraysByGem
 						.Where(arg => arg.Key != Gem.Unknown)
 						.Select(arg => arg.Value)
 						.SelectMany(pattern.GetSwaps))
