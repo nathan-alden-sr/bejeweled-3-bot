@@ -6,12 +6,10 @@ namespace NathanAlden.Bejeweled3Bot
 	{
 		private readonly Rect _clientRectangle;
 		private readonly Rect _screenRectangle;
-		private readonly Size _tileSampleSize;
 		private readonly Size _tileSize;
 
-		public BoardDimensions(Size tileSampleSize, Rect clientRectangle, Rect screenRectangle, Size tileSize)
+		public BoardDimensions(Rect clientRectangle, Rect screenRectangle, Size tileSize)
 		{
-			_tileSampleSize = tileSampleSize;
 			_clientRectangle = clientRectangle;
 			_screenRectangle = screenRectangle;
 			_tileSize = tileSize;
@@ -30,14 +28,6 @@ namespace NathanAlden.Bejeweled3Bot
 			get
 			{
 				return _screenRectangle;
-			}
-		}
-
-		public Size TileSampleSize
-		{
-			get
-			{
-				return _tileSampleSize;
 			}
 		}
 

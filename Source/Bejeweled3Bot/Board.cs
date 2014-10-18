@@ -26,7 +26,6 @@ namespace NathanAlden.Bejeweled3Bot
 			var clientScale = new Point(clientSize.Width / Constants.DefaultClientSize.Width, clientSize.Height / Constants.DefaultClientSize.Height);
 			var gameScreenRectangle = new Rect(new Point(clientScreenOrigin.X, clientScreenOrigin.Y), clientSize);
 			var tileSize = new Size(Constants.DefaultTileSize.Width * clientScale.X, Constants.DefaultTileSize.Height * clientScale.Y);
-			var tileSampleSize = new Size(Constants.DefaultTileSampleSize.Width * clientScale.X, Constants.DefaultTileSampleSize.Height * clientScale.Y);
 			var clientRectangle = new Rect(
 				gameType.DefaultBoardOrigin.X * clientScale.X,
 				gameType.DefaultBoardOrigin.Y * clientScale.Y,
@@ -34,7 +33,7 @@ namespace NathanAlden.Bejeweled3Bot
 				tileSize.Height * Constants.DefaultTileSize.Height);
 			var screenRectangle = new Rect(new Point(gameScreenRectangle.X + clientRectangle.X, gameScreenRectangle.Y + clientRectangle.Y), clientRectangle.Size);
 
-			_dimensions = new BoardDimensions(tileSampleSize, clientRectangle, screenRectangle, tileSize);
+			_dimensions = new BoardDimensions(clientRectangle, screenRectangle, tileSize);
 		}
 
 		public void Capture(Action<Board, Bitmap, BoardDimensions> captureDelegate, CancellationToken cancellationToken)

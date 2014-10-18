@@ -19,9 +19,9 @@ namespace NathanAlden.Bejeweled3Bot
 				{
 					for (int tileY = 0; tileY < Constants.DefaultSizeInTiles.Height; tileY++)
 					{
-						var pixelX = (int)((tileX * dimensions.TileSize.Width) + ((dimensions.TileSize.Width / 2) - (dimensions.TileSampleSize.Width / 2)));
-						var pixelY = (int)((tileY * dimensions.TileSize.Height) + ((dimensions.TileSize.Height / 2) - (dimensions.TileSampleSize.Height / 2)));
-						ColorComponents colorComponents = CalculateAverageComponents(bitmapData, pixelX, pixelY, (int)dimensions.TileSampleSize.Width, (int)dimensions.TileSampleSize.Height);
+						var pixelX = (int)((tileX * dimensions.TileSize.Width) + ((dimensions.TileSize.Width / 2) - (dimensions.TileSize.Width / 2)));
+						var pixelY = (int)((tileY * dimensions.TileSize.Height) + ((dimensions.TileSize.Height / 2) - (dimensions.TileSize.Height / 2)));
+						ColorComponents colorComponents = CalculateAverageComponents(bitmapData, pixelX, pixelY, (int)dimensions.TileSize.Width, (int)dimensions.TileSize.Height);
 
 						if (colorComponents.Saturation <= 0.1)
 						{
