@@ -12,9 +12,6 @@ namespace NathanAlden.Bejeweled3Bot
 		[DllImport("user32.dll")]
 		public static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
 
-		[DllImport("user32.dll")]
-		public static extern IntPtr GetForegroundWindow();
-
 		[DllImport("gdi32.dll")]
 		public static extern bool DeleteObject(IntPtr hObject);
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Windows;
@@ -11,6 +12,7 @@ using System.Windows.Threading;
 using WindowsInput;
 
 using Point = System.Drawing.Point;
+using Size = System.Windows.Size;
 
 namespace NathanAlden.Bejeweled3Bot
 {
@@ -18,8 +20,10 @@ namespace NathanAlden.Bejeweled3Bot
 	{
 		private static readonly MouseSimulator _mouseSimulator = new MouseSimulator(new InputSimulator());
 		private static readonly Size _screenSize;
+		private readonly CapturesPerSecondCalculator _capturesPerSecondCalculator = new CapturesPerSecondCalculator();
 		private readonly Dictionary<Point, Border> _tilesByPoint = new Dictionary<Point, Border>();
 		private readonly DispatcherTimer _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+		private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
 		static MainWindow()
 		{
@@ -30,7 +34,7 @@ namespace NathanAlden.Bejeweled3Bot
 		{
 			InitializeComponent();
 
-			_timer.Tick += (sender, args) => TimerStep();
+			_timer.Tick += (sender, args) => TimerTick();
 
 			GameTypeComboBox.DisplayMemberPath = "Name";
 			GameTypeComboBox.ItemsSource = GameType.All.OrderBy(arg => arg.Name);
@@ -38,12 +42,12 @@ namespace NathanAlden.Bejeweled3Bot
 
 			const int tileMargin = 20;
 
-			for (int x = 0; x < Board.DefaultSizeInTiles.Width; x++)
+			for (int x = 0; x < Constants.DefaultSizeInTiles.Width; x++)
 			{
-				for (int y = 0; y < Board.DefaultSizeInTiles.Height; y++)
+				for (int y = 0; y < Constants.DefaultSizeInTiles.Height; y++)
 				{
-					int width = Board.DefaultTileSize.Width - tileMargin;
-					int height = Board.DefaultTileSize.Height - tileMargin;
+					int width = Constants.DefaultTileSize.Width - tileMargin;
+					int height = Constants.DefaultTileSize.Height - tileMargin;
 					var border = new Border
 					{
 						Background = new SolidColorBrush(Colors.Black),
@@ -59,8 +63,8 @@ namespace NathanAlden.Bejeweled3Bot
 						}
 					};
 
-					Canvas.SetLeft(border, (x * Board.DefaultTileSize.Width) + tileMargin);
-					Canvas.SetTop(border, (y * Board.DefaultTileSize.Height) + tileMargin);
+					Canvas.SetLeft(border, (x * Constants.DefaultTileSize.Width) + tileMargin);
+					Canvas.SetTop(border, (y * Constants.DefaultTileSize.Height) + tileMargin);
 
 					GameBoardCanvas.Children.Add(border);
 
@@ -69,29 +73,17 @@ namespace NathanAlden.Bejeweled3Bot
 			}
 		}
 
-		private void DelayIntegerUpDownValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+		private bool IsCapturing
 		{
-			_timer.Interval = TimeSpan.FromMilliseconds(DelayIntegerUpDown.Value.Value);
-		}
-
-		private void SwapZeroButtonClick(object sender, RoutedEventArgs e)
-		{
-			Step(0);
-		}
-
-		private void SwapOneButtonClick(object sender, RoutedEventArgs e)
-		{
-			Step(1);
-		}
-
-		private void StepButtonClick(object sender, RoutedEventArgs e)
-		{
-			Step();
+			get
+			{
+				return _timer.IsEnabled;
+			}
 		}
 
 		private void GoButtonClick(object sender, RoutedEventArgs e)
 		{
-			if (_timer.IsEnabled)
+			if (IsCapturing)
 			{
 				Stop();
 			}
@@ -101,92 +93,108 @@ namespace NathanAlden.Bejeweled3Bot
 			}
 		}
 
-		private void TimerStep()
+		private void TimerTick()
 		{
 			if (ShouldStop())
 			{
 				Stop();
-				return;
-			}
-			if (Win32.GetForegroundWindow() == App.Bejeweled3Process.MainWindowHandle)
-			{
-				Step();
 			}
 		}
 
-		private void Step(int? maximumSwaps = null)
+		private void BoardCapture(Board board, Bitmap bitmap, BoardDimensions dimensions)
 		{
-			using (var board = new Board(App.Bejeweled3Process, (GameType)GameTypeComboBox.SelectedItem))
+			var eventProcessor = new CaptureProcessor();
+			IReadOnlyDictionary<Gem, BitArray2D> bitArraysByGem = eventProcessor.Process(bitmap, dimensions);
+
+			foreach (var pair in bitArraysByGem)
 			{
-				IReadOnlyDictionary<Gem, BitArray2D> bitArraysByGem = board.ProcessGameBoard();
-
-				foreach (var pair in bitArraysByGem)
+				for (int x = 0; x < pair.Value.Width; x++)
 				{
-					for (int x = 0; x < pair.Value.Width; x++)
+					for (int y = 0; y < pair.Value.Height; y++)
 					{
-						for (int y = 0; y < pair.Value.Height; y++)
+						if (pair.Value.Get(x, y))
 						{
-							if (pair.Value.Get(x, y))
-							{
-								Border border = _tilesByPoint[new Point(x, y)];
+							Border border = _tilesByPoint[new Point(x, y)];
 
-								border.Background = new SolidColorBrush(pair.Key.BackgroundColor);
+							border.Background = new SolidColorBrush(pair.Key.BackgroundColor);
 
-								var textBlock = ((TextBlock)border.Child);
+							var textBlock = ((TextBlock)border.Child);
 
-								textBlock.Foreground = new SolidColorBrush(pair.Key.ForegroundColor);
-								textBlock.Text = pair.Key.Abbreviation;
-							}
+							textBlock.Foreground = new SolidColorBrush(pair.Key.ForegroundColor);
+							textBlock.Text = pair.Key.Abbreviation;
 						}
 					}
 				}
+			}
 
-				if (maximumSwaps <= 0)
+			Swap[] swaps = Patterns.All
+				.SelectMany(
+					pattern => bitArraysByGem
+						.Where(arg => arg.Key != Gem.Unknown)
+						.Select(arg => arg.Value)
+						.SelectMany(pattern.GetSwaps))
+				.OrderBy(arg => arg.ToTile.Y)
+				.ToArray();
+
+			foreach (Swap swap in swaps)
+			{
+				System.Windows.Point fromCoordinate = board.GetTileCenterCoordinate(swap.FromTile.X, swap.FromTile.Y);
+				System.Windows.Point toCoordinate = board.GetTileCenterCoordinate(swap.ToTile.X, swap.ToTile.Y);
+
+				MoveMouseTo(fromCoordinate);
+				_mouseSimulator.LeftButtonDown();
+				MoveMouseTo(toCoordinate);
+				_mouseSimulator.LeftButtonUp();
+
+				if (ShouldStop())
 				{
+					Stop();
 					return;
-				}
-
-				int swapCount = 0;
-				Swap[] swaps = Patterns.All.SelectMany(pattern => bitArraysByGem.Where(arg => arg.Key != Gem.Unknown).Select(arg => arg.Value).SelectMany(pattern.GetSwaps)).OrderBy(arg => arg.ToTile.Y).ToArray();
-
-				for (int i = 0; i < swaps.Length; i++)
-				{
-					Swap swap = swaps[i];
-					System.Windows.Point fromCoordinate = board.GetTileCenterCoordinate(swap.FromTile.X, swap.FromTile.Y);
-					System.Windows.Point toCoordinate = board.GetTileCenterCoordinate(swap.ToTile.X, swap.ToTile.Y);
-
-					MoveMouseTo(fromCoordinate);
-					_mouseSimulator.LeftButtonDown();
-					MoveMouseTo(toCoordinate);
-					_mouseSimulator.LeftButtonUp();
-
-					if (++swapCount == maximumSwaps)
-					{
-						return;
-					}
-					if (ShouldStop())
-					{
-						Stop();
-						return;
-					}
-					if (i < swaps.Length - 1)
-					{
-						Thread.Sleep(_timer.Interval);
-					}
 				}
 			}
 		}
 
 		private void Stop()
 		{
-			_timer.Stop();
 			GoButton.Content = "Go";
+			EndCapture();
 		}
 
 		private void Go()
 		{
 			GoButton.Content = "Stop (CTRL+ALT)";
+			StartCapture();
+		}
+
+		private void StartCapture()
+		{
+			EndCapture();
+			CapturesPerSecondLabel.Content = "";
+			_cancellationTokenSource = new CancellationTokenSource();
+			_capturesPerSecondCalculator.Restart();
+
+			new Board(App.Bejeweled3Process, (GameType)GameTypeComboBox.SelectedItem)
+				.Capture(
+					(board, bitmap, dimensions) =>
+						Dispatcher.Invoke(() =>
+						{
+							_capturesPerSecondCalculator.LogCapture();
+							CapturesPerSecondLabel.Content = _capturesPerSecondCalculator.CapturesPerSecond.ToString("F1");
+							BoardCapture(board, bitmap, dimensions);
+						}),
+					_cancellationTokenSource.Token);
 			_timer.Start();
+		}
+
+		private void EndCapture()
+		{
+			_timer.Stop();
+			_capturesPerSecondCalculator.Stop();
+			if (_cancellationTokenSource != null)
+			{
+				_cancellationTokenSource.Cancel();
+				_cancellationTokenSource = null;
+			}
 		}
 
 		private static void MoveMouseTo(System.Windows.Point coordinate)

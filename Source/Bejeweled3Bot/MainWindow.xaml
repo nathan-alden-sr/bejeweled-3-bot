@@ -14,12 +14,14 @@
 		<Canvas x:Name="GameBoardCanvas" Grid.Row="0" Grid.Column="0" Background="Black" />
 		<Label Content="Game type:" Grid.Column="1" HorizontalAlignment="Left" Margin="10,6,0,0" VerticalAlignment="Top" />
 		<ComboBox x:Name="GameTypeComboBox" Grid.Column="1" HorizontalAlignment="Left" Margin="105,10,0,0" VerticalAlignment="Top" Width="185"/>
-		<Label Content="Delay between swaps:" Grid.Column="1" HorizontalAlignment="Left" Margin="10,42,0,0" VerticalAlignment="Top" />
-		<xctk:IntegerUpDown x:Name="DelayIntegerUpDown" Value="100" Grid.Column="1" Margin="180,42,41,0" Increment="100" Minimum="0" Maximum="10000" ValueChanged="DelayIntegerUpDownValueChanged" Height="31" VerticalAlignment="Top" />
-		<Label Content="ms" Grid.Column="1" HorizontalAlignment="Left" Margin="259,42,0,0" VerticalAlignment="Top"/>
-		<Button x:Name="SwapZeroButton" Content="Swap Zero" Grid.Column="1" Margin="10,0,10,117" VerticalAlignment="Bottom" FontSize="20" Click="SwapZeroButtonClick" />
-		<Button x:Name="SwapOneButton" Content="Swap One" Grid.Column="1" Margin="10,0,10,81" VerticalAlignment="Bottom" FontSize="20" Click="SwapOneButtonClick" />
-		<Button x:Name="StepButton" Content="Step" Grid.Column="1" Margin="10,0,10,45" VerticalAlignment="Bottom" FontSize="20" Click="StepButtonClick" />
 		<Button x:Name="GoButton" Content="Go" Grid.Column="1" Margin="10,0,10,9" FontSize="20" FontWeight="Bold" Height="31" VerticalAlignment="Bottom" Click="GoButtonClick"/>
+		<Grid Grid.Column="1" Margin="10,42,10,45">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition />
+				<ColumnDefinition />
+			</Grid.ColumnDefinitions>
+			<Label Content="Captures per sec.:" HorizontalAlignment="Left" Height="31" VerticalAlignment="Top" />
+			<Label x:Name="CapturesPerSecondLabel" Content="" Height="31" VerticalAlignment="Top" Grid.Column="1" FontWeight="Bold" />
+		</Grid>
 	</Grid>
 </Window>
